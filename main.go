@@ -4,6 +4,7 @@ import "net/http"
 
 func main() {
 	mux := http.NewServeMux()
+	mux.Handle("/", http.FileServer(http.Dir(".")))
 	corsMux := middlewareCors(mux)
 	server := http.Server{
 		Addr:    ":8080",
