@@ -14,8 +14,11 @@ type apiConfig struct {
 func main() {
 	apiCfg := apiConfig{fileserverHits: 0}
 	r := chi.NewRouter()
-	r.Get("/healthz", healthCheck)
-	r.Get("/metrics", apiCfg.metricsHandler)
+	apiRouter := chi.NewRouter()
+	apiRouter.Get("/healthz", healthCheck)
+	apiRouter.Get("/metrics", apiCfg.metricsHandler)
+	apiRouter.Get("/reset", apiCfg.resetHandler)
+	r.Mount("/api", apiRouter)
 	r.Handle("/app/*", apiCfg.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir(".")))))
 	r.Handle("/app", apiCfg.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir(".")))))
 	corsMux := middlewareCors(r)
