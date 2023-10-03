@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func healthCheck(w http.ResponseWriter, req *http.Request) {
@@ -82,7 +83,37 @@ func getSingleChirpHandler(w http.ResponseWriter, r *http.Request) {
 
 func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
-		Email string `json:"email"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	params := parameters{}
+	params, err := decodeJsonBody(r.Body, params)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters")
+		return
+	}
+
+	password, err := bcrypt.GenerateFromPassword([]byte(params.Password), bcrypt.DefaultCost)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't hash password")
+		return
+	}
+
+	db := r.Context().Value(contextKeyDB).(*DB)
+	user, err := db.CreateUser(params.Email, string(password))
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't create chirp")
+		return
+	}
+
+	respondWithJson(w, http.StatusCreated, user)
+}
+
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+	type parameters struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 
 	params := parameters{}
@@ -93,12 +124,22 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	db := r.Context().Value(contextKeyDB).(*DB)
-	user, err := db.CreateUser(params.Email)
+	user, err := db.FindUserByEmail(params.Email)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't create chirp")
+		respondWithError(w, http.StatusBadRequest, "User does not exist")
+		return
+
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(params.Password))
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Password is not correct")
 		return
 	}
 
-	respondWithJson(w, http.StatusCreated, user)
+	respondWithJson(w, http.StatusOK, PublicUser{
+		ID:    user.ID,
+		Email: user.Email,
+	})
 
 }

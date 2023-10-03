@@ -25,14 +25,27 @@ type Chirp struct {
 }
 
 type User struct {
-	ID    int    `json:"id"`
-	Email string `json:"email"`
+	ID       int    `json:"id"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type PublicUser struct {
+	ID       int    `json:"id"`
+	Email    string `json:"email"`
+	Password string `json:"-"`
 }
 
 type ChirpNotFound struct{}
 
 func (e *ChirpNotFound) Error() string {
 	return "Chirp not found"
+}
+
+type UserExists struct{}
+
+func (e *UserExists) Error() string {
+	return "A user with that email address already exists"
 }
 
 func NewDB(path string) (*DB, error) {
@@ -168,33 +181,60 @@ func (db *DB) GetUsers() ([]User, error) {
 	return users, nil
 }
 
-func (db *DB) CreateUser(email string) (User, error) {
+func (db *DB) CreateUser(email, password string) (PublicUser, error) {
 	users, err := db.GetUsers()
 	if err != nil {
-		return User{}, errors.New("could not create user")
+		return PublicUser{}, errors.New("could not create user")
 	}
+
+	for _, user := range users {
+		if user.Email == email {
+			return PublicUser{}, &UserExists{}
+		}
+	}
+
 	lastID := 0
 	if len(users) > 0 {
 		lastUser := users[len(users)-1]
 		lastID = lastUser.ID
 	}
 	newUser := User{
-		Email: email,
-		ID:    lastID + 1,
+		Email:    email,
+		Password: password,
+		ID:       lastID + 1,
 	}
 
 	dbData, err := db.loadDB()
 
 	if err != nil {
-		return User{}, err
+		return PublicUser{}, err
 	}
 
 	dbData.Users[newUser.ID] = newUser
 	err = db.writeDB(dbData)
 
 	if err != nil {
-		return User{}, err
+		return PublicUser{}, err
 	}
 
-	return newUser, nil
+	return PublicUser{
+		ID:    newUser.ID,
+		Email: newUser.Email,
+	}, nil
+}
+
+func (db *DB) FindUserByEmail(email string) (User, error) {
+	users, err := db.GetUsers()
+
+	if err != nil {
+		return User{}, errors.New("could not get users")
+	}
+
+	for _, user := range users {
+		if user.Email == email {
+			return user, nil
+		}
+	}
+
+	return User{}, errors.New("User not found")
 }
