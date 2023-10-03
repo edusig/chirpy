@@ -4,8 +4,10 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -110,10 +112,11 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	respondWithJson(w, http.StatusCreated, user)
 }
 
-func loginHandler(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) login(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Email            string `json:"email"`
+		Password         string `json:"password"`
+		ExpiresInSeconds *int   `json:"expires_in_seconds"`
 	}
 
 	params := parameters{}
@@ -137,9 +140,34 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithJson(w, http.StatusOK, PublicUser{
+	expiresAdd := 24 * 3600
+	if params.ExpiresInSeconds == nil || *params.ExpiresInSeconds > 24*3600 {
+		expiresAdd = 24 * 3600
+	} else {
+		expiresAdd = *params.ExpiresInSeconds
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
+		Issuer:    "chirpy",
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(expiresAdd))),
+		Subject:   strconv.Itoa(user.ID),
+	})
+
+	signedToken, err := token.SignedString(cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't sign JWT Token")
+		return
+	}
+
+	respondWithJson(w, http.StatusOK, struct {
+		ID    int    `json:"id"`
+		Email string `json:"email"`
+		Token string `json:"token"`
+	}{
 		ID:    user.ID,
 		Email: user.Email,
+		Token: signedToken,
 	})
 
 }

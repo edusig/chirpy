@@ -4,19 +4,25 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/joho/godotenv"
 )
 
 type apiConfig struct {
 	fileserverHits int
 	databasePath   string
+	jwtSecret      string
 }
 
 func main() {
+	godotenv.Load()
+
 	const filepathRoot = "."
 	const port = ":8080"
 	const databasePath = "./database.json"
+	jwtSecret := os.Getenv("JST_SECRET")
 
 	dbg := flag.Bool("debug", false, "Enable debug mode")
 	flag.Parse()
@@ -24,6 +30,7 @@ func main() {
 	apiCfg := apiConfig{
 		fileserverHits: 0,
 		databasePath:   databasePath,
+		jwtSecret:      jwtSecret,
 	}
 
 	if dbg != nil && *dbg {
@@ -45,7 +52,7 @@ func main() {
 	apiRouter.Get("/chirps", getChirpsHandler)
 	apiRouter.Get("/chirps/{chirpID}", getSingleChirpHandler)
 	apiRouter.Post("/users", createUserHandler)
-	apiRouter.Post("/login", loginHandler)
+	apiRouter.Post("/login", apiCfg.login)
 	r.Mount("/api", apiRouter)
 
 	adminRouter := chi.NewRouter()
