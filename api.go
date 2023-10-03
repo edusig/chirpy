@@ -21,7 +21,7 @@ func validateHandler(w http.ResponseWriter, r *http.Request) {
 		Body string `json:"body"`
 	}
 	type returnValue struct {
-		Valid bool `json:"valid"`
+		CleanedBody string `json:"cleaned_body"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -37,7 +37,8 @@ func validateHandler(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusBadRequest, "Chirp is too long")
 		return
 	}
+
 	respondWithJson(w, http.StatusOK, returnValue{
-		Valid: true,
+		CleanedBody: cleanBody(params.Body),
 	})
 }
