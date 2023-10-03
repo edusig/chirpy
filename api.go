@@ -1,7 +1,11 @@
 package main
 
 import (
+	"errors"
 	"net/http"
+	"strconv"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func healthCheck(w http.ResponseWriter, req *http.Request) {
@@ -51,6 +55,27 @@ func getChirpsHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't get chirps")
 		return
+	}
+	respondWithJson(w, http.StatusOK, chirps)
+}
+
+func getSingleChirpHandler(w http.ResponseWriter, r *http.Request) {
+	db := r.Context().Value(contextKeyDB).(*DB)
+	chirpID := chi.URLParam(r, "chirpID")
+	id, err := strconv.Atoi(chirpID)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid chirp id")
+		return
+	}
+	chirps, err := db.GetChirp(id)
+	if err != nil {
+		if errors.Is(err, &ChirpNotFound{}) {
+			respondWithError(w, http.StatusNotFound, "Couldn't find chirp")
+			return
+		} else {
+			respondWithError(w, http.StatusInternalServerError, "Couldn't get chirp")
+			return
+		}
 	}
 	respondWithJson(w, http.StatusOK, chirps)
 }

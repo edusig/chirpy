@@ -23,6 +23,12 @@ type Chirp struct {
 	Body string `json:"body"`
 }
 
+type ChirpNotFound struct{}
+
+func (e *ChirpNotFound) Error() string {
+	return "Chirp not found"
+}
+
 func NewDB(path string) (*DB, error) {
 	db := &DB{
 		path: path,
@@ -80,6 +86,18 @@ func (db *DB) GetChirps() ([]Chirp, error) {
 		return a.ID < b.ID
 	})
 	return chirps, nil
+}
+
+func (db *DB) GetChirp(id int) (Chirp, error) {
+	data, err := db.loadDB()
+	if err != nil {
+		return Chirp{}, errors.New("could not get chirps")
+	}
+	chirp, ok := data.Chirps[id]
+	if !ok {
+		return Chirp{}, &ChirpNotFound{}
+	}
+	return chirp, nil
 }
 
 func (db *DB) ensureDB() error {
