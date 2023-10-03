@@ -79,3 +79,26 @@ func getSingleChirpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	respondWithJson(w, http.StatusOK, chirps)
 }
+
+func createUserHandler(w http.ResponseWriter, r *http.Request) {
+	type parameters struct {
+		Email string `json:"email"`
+	}
+
+	params := parameters{}
+	params, err := decodeJsonBody(r.Body, params)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters")
+		return
+	}
+
+	db := r.Context().Value(contextKeyDB).(*DB)
+	user, err := db.CreateUser(params.Email)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't create chirp")
+		return
+	}
+
+	respondWithJson(w, http.StatusCreated, user)
+
+}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net/http"
 
@@ -17,12 +18,18 @@ func main() {
 	const port = ":8080"
 	const databasePath = "./database.json"
 
+	dbg := flag.Bool("debug", false, "Enable debug mode")
+	flag.Parse()
+
 	apiCfg := apiConfig{
 		fileserverHits: 0,
 		databasePath:   databasePath,
 	}
 
-	cleanDatabaseJson(databasePath)
+	if dbg != nil && *dbg {
+		log.Printf("Debug mode on. Will remove previous database file")
+		cleanDatabaseJson(databasePath)
+	}
 
 	r := chi.NewRouter()
 
@@ -37,6 +44,7 @@ func main() {
 	apiRouter.Post("/chirps", postChirpsHandler)
 	apiRouter.Get("/chirps", getChirpsHandler)
 	apiRouter.Get("/chirps/{chirpID}", getSingleChirpHandler)
+	apiRouter.Post("/users", createUserHandler)
 	r.Mount("/api", apiRouter)
 
 	adminRouter := chi.NewRouter()

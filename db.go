@@ -16,11 +16,17 @@ type DB struct {
 
 type DBStructure struct {
 	Chirps map[int]Chirp `json:"chirps"`
+	Users  map[int]User  `json:"users"`
 }
 
 type Chirp struct {
 	ID   int    `json:"id"`
 	Body string `json:"body"`
+}
+
+type User struct {
+	ID    int    `json:"id"`
+	Email string `json:"email"`
 }
 
 type ChirpNotFound struct{}
@@ -103,7 +109,10 @@ func (db *DB) GetChirp(id int) (Chirp, error) {
 func (db *DB) ensureDB() error {
 	_, err := os.Stat(db.path)
 	if os.IsNotExist(err) {
-		structure := DBStructure{Chirps: make(map[int]Chirp)}
+		structure := DBStructure{
+			Chirps: make(map[int]Chirp),
+			Users:  make(map[int]User),
+		}
 		data, err := json.Marshal(structure)
 		if err != nil {
 			return err
@@ -141,4 +150,51 @@ func (db *DB) writeDB(dbStructure DBStructure) error {
 	}
 	err = os.WriteFile(db.path, data, fs.FileMode(os.O_RDWR))
 	return err
+}
+
+func (db *DB) GetUsers() ([]User, error) {
+	data, err := db.loadDB()
+	if err != nil {
+		return make([]User, 0), errors.New("could not get users")
+	}
+	users := make([]User, 0)
+	for _, val := range data.Users {
+		users = append(users, val)
+	}
+	sort.Slice(users, func(i, j int) bool {
+		a, b := users[i], users[j]
+		return a.ID < b.ID
+	})
+	return users, nil
+}
+
+func (db *DB) CreateUser(email string) (User, error) {
+	users, err := db.GetUsers()
+	if err != nil {
+		return User{}, errors.New("could not create user")
+	}
+	lastID := 0
+	if len(users) > 0 {
+		lastUser := users[len(users)-1]
+		lastID = lastUser.ID
+	}
+	newUser := User{
+		Email: email,
+		ID:    lastID + 1,
+	}
+
+	dbData, err := db.loadDB()
+
+	if err != nil {
+		return User{}, err
+	}
+
+	dbData.Users[newUser.ID] = newUser
+	err = db.writeDB(dbData)
+
+	if err != nil {
+		return User{}, err
+	}
+
+	return newUser, nil
 }
