@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"internal/database"
 	"log"
 	"net/http"
 )
@@ -27,7 +28,7 @@ func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
 }
 
 func (cfg *apiConfig) middlewareDB(next http.Handler) http.Handler {
-	db, err := NewDB(cfg.databasePath)
+	db, err := database.NewDB(cfg.databasePath)
 	if err != nil {
 		log.Fatal(err)
 		return nil

@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 )
 
@@ -78,8 +77,4 @@ func decodeJsonBody[T any](body io.ReadCloser, resp T) (T, error) {
 		return resp, errors.New("couldn't decode parameters")
 	}
 	return resp, nil
-}
-
-func cleanDatabaseJson(path string) {
-	os.Remove(path)
 }
