@@ -25,13 +25,13 @@ func main() {
 	cleanDatabaseJson(databasePath)
 
 	r := chi.NewRouter()
-	r.Use(apiCfg.middlewareDB)
 
 	fsHandler := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot))))
 	r.Handle("/app", fsHandler)
 	r.Handle("/app/*", fsHandler)
 
 	apiRouter := chi.NewRouter()
+	apiRouter.Use(apiCfg.middlewareDB)
 	apiRouter.Get("/healthz", healthCheck)
 	apiRouter.Get("/reset", apiCfg.resetHandler)
 	apiRouter.Post("/chirps", postChirpsHandler)
