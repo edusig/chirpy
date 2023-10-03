@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"internal/database"
 	"log"
 	"net/http"
 	"os"
@@ -12,7 +13,7 @@ import (
 
 type apiConfig struct {
 	fileserverHits int
-	databasePath   string
+	database       *database.DB
 	jwtSecret      string
 }
 
@@ -24,18 +25,25 @@ func main() {
 	const databasePath = "./database.json"
 	jwtSecret := os.Getenv("JST_SECRET")
 
+	db, err := database.NewDB("database.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	dbg := flag.Bool("debug", false, "Enable debug mode")
 	flag.Parse()
+	if dbg != nil && *dbg {
+		log.Printf("Debug mode on. Will remove previous database file")
+		err := db.ResetDB()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 
 	apiCfg := apiConfig{
 		fileserverHits: 0,
-		databasePath:   databasePath,
+		database:       db,
 		jwtSecret:      jwtSecret,
-	}
-
-	if dbg != nil && *dbg {
-		log.Printf("Debug mode on. Will remove previous database file")
-		cleanDatabaseJson(databasePath)
 	}
 
 	r := chi.NewRouter()
@@ -45,13 +53,12 @@ func main() {
 	r.Handle("/app/*", fsHandler)
 
 	apiRouter := chi.NewRouter()
-	apiRouter.Use(apiCfg.middlewareDB)
 	apiRouter.Get("/healthz", healthCheck)
 	apiRouter.Get("/reset", apiCfg.resetHandler)
-	apiRouter.Post("/chirps", postChirpsHandler)
-	apiRouter.Get("/chirps", getChirpsHandler)
-	apiRouter.Get("/chirps/{chirpID}", getSingleChirpHandler)
-	apiRouter.Post("/users", createUserHandler)
+	apiRouter.Post("/chirps", apiCfg.postChirpsHandler)
+	apiRouter.Get("/chirps", apiCfg.getChirpsHandler)
+	apiRouter.Get("/chirps/{chirpID}", apiCfg.getSingleChirpHandler)
+	apiRouter.Post("/users", apiCfg.createUserHandler)
 	apiRouter.Post("/login", apiCfg.login)
 	r.Mount("/api", apiRouter)
 

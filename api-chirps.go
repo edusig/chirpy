@@ -9,7 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func postChirpsHandler(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) postChirpsHandler(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Body string `json:"body"`
 	}
@@ -29,8 +29,7 @@ func postChirpsHandler(w http.ResponseWriter, r *http.Request) {
 
 	cleanedBody := cleanBody(params.Body)
 
-	db := r.Context().Value(contextKeyDB).(*database.DB)
-	chirp, err := db.CreateChirp(cleanedBody)
+	chirp, err := cfg.database.CreateChirp(cleanedBody)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create chirp")
 		return
@@ -39,9 +38,8 @@ func postChirpsHandler(w http.ResponseWriter, r *http.Request) {
 	respondWithJson(w, http.StatusCreated, chirp)
 }
 
-func getChirpsHandler(w http.ResponseWriter, r *http.Request) {
-	db := r.Context().Value(contextKeyDB).(*database.DB)
-	chirps, err := db.GetChirps()
+func (cfg *apiConfig) getChirpsHandler(w http.ResponseWriter, r *http.Request) {
+	chirps, err := cfg.database.GetChirps()
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't get chirps")
 		return
@@ -49,15 +47,14 @@ func getChirpsHandler(w http.ResponseWriter, r *http.Request) {
 	respondWithJson(w, http.StatusOK, chirps)
 }
 
-func getSingleChirpHandler(w http.ResponseWriter, r *http.Request) {
-	db := r.Context().Value(contextKeyDB).(*database.DB)
+func (cfg *apiConfig) getSingleChirpHandler(w http.ResponseWriter, r *http.Request) {
 	chirpID := chi.URLParam(r, "chirpID")
 	id, err := strconv.Atoi(chirpID)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid chirp id")
 		return
 	}
-	chirps, err := db.GetChirp(id)
+	chirps, err := cfg.database.GetChirp(id)
 	if err != nil {
 		if errors.Is(err, database.ErrNotExist) {
 			respondWithError(w, http.StatusNotFound, "Couldn't find chirp")
