@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"net/http"
 )
 
@@ -16,17 +15,13 @@ func (cfg *apiConfig) resetHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 }
 
-func validateHandler(w http.ResponseWriter, r *http.Request) {
+func postChirpsHandler(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Body string `json:"body"`
 	}
-	type returnValue struct {
-		CleanedBody string `json:"cleaned_body"`
-	}
 
-	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
-	err := decoder.Decode(&params)
+	params, err := decodeJsonBody(r.Body, params)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters")
 		return
@@ -38,7 +33,24 @@ func validateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithJson(w, http.StatusOK, returnValue{
-		CleanedBody: cleanBody(params.Body),
-	})
+	cleanedBody := cleanBody(params.Body)
+
+	db := r.Context().Value(contextKeyDB).(*DB)
+	chirp, err := db.CreateChirp(cleanedBody)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't create chirp")
+		return
+	}
+
+	respondWithJson(w, http.StatusCreated, chirp)
+}
+
+func getChirpsHandler(w http.ResponseWriter, r *http.Request) {
+	db := r.Context().Value(contextKeyDB).(*DB)
+	chirps, err := db.GetChirps()
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't get chirps")
+		return
+	}
+	respondWithJson(w, http.StatusOK, chirps)
 }

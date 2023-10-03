@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 
@@ -10,17 +9,23 @@ import (
 
 type apiConfig struct {
 	fileserverHits int
+	databasePath   string
 }
 
 func main() {
 	const filepathRoot = "."
 	const port = ":8080"
+	const databasePath = "./database.json"
 
 	apiCfg := apiConfig{
 		fileserverHits: 0,
+		databasePath:   databasePath,
 	}
 
+	cleanDatabaseJson(databasePath)
+
 	r := chi.NewRouter()
+	r.Use(apiCfg.middlewareDB)
 
 	fsHandler := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot))))
 	r.Handle("/app", fsHandler)
@@ -29,7 +34,8 @@ func main() {
 	apiRouter := chi.NewRouter()
 	apiRouter.Get("/healthz", healthCheck)
 	apiRouter.Get("/reset", apiCfg.resetHandler)
-	apiRouter.Post("/validate_chirp", validateHandler)
+	apiRouter.Post("/chirps", postChirpsHandler)
+	apiRouter.Get("/chirps", getChirpsHandler)
 	r.Mount("/api", apiRouter)
 
 	adminRouter := chi.NewRouter()
@@ -43,28 +49,4 @@ func main() {
 	}
 	log.Printf("Serving files from %s on port: %s\n", filepathRoot, port)
 	log.Fatal(server.ListenAndServe())
-}
-
-func respondWithError(w http.ResponseWriter, statusCode int, msg string) {
-	if statusCode >= 500 {
-		log.Printf("Responding with 5XX error: %s", msg)
-	}
-	type returnError struct {
-		Error string `json:"error"`
-	}
-	respondWithJson(w, statusCode, returnError{
-		Error: msg,
-	})
-}
-
-func respondWithJson(w http.ResponseWriter, statusCode int, payload interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	data, err := json.Marshal(payload)
-	if err != nil {
-		log.Printf("Error marshalling JSON: %s", err)
-		w.WriteHeader(500)
-		return
-	}
-	w.WriteHeader(statusCode)
-	w.Write(data)
 }
