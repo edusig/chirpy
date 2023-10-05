@@ -58,6 +58,7 @@ func main() {
 	apiRouter.Post("/chirps", apiCfg.postChirpsHandler)
 	apiRouter.Get("/chirps", apiCfg.getChirpsHandler)
 	apiRouter.Get("/chirps/{chirpID}", apiCfg.getSingleChirpHandler)
+	apiRouter.Delete("/chirps/{chirpID}", apiCfg.deleteSingleChirpHandler)
 	apiRouter.Post("/users", apiCfg.createUserHandler)
 	apiRouter.Put("/users", apiCfg.updateUserHandler)
 	apiRouter.Post("/login", apiCfg.login)

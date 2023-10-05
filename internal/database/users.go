@@ -24,7 +24,7 @@ func (db *DB) CreateUser(email, password string) (User, error) {
 
 	lastID := 0
 	if len(dbStructure.Users) > 0 {
-		lastUser := dbStructure.Users[len(dbStructure.Users)-1]
+		lastUser := dbStructure.Users[len(dbStructure.Users)]
 		lastID = lastUser.ID
 	}
 	newUser := User{
