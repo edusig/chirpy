@@ -57,7 +57,24 @@ func (cfg *apiConfig) getChirpsHandler(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't get chirps")
 		return
 	}
-	respondWithJson(w, http.StatusOK, chirps)
+
+	responseChirps := chirps
+	authorParam := r.URL.Query().Get("author_id")
+	if authorParam != "" {
+		authorId, err := strconv.Atoi(authorParam)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, "Invalid author id")
+			return
+		}
+		responseChirps = make([]database.Chirp, 0)
+		for _, chirp := range chirps {
+			if chirp.AuthorId == authorId {
+				responseChirps = append(responseChirps, chirp)
+			}
+		}
+	}
+
+	respondWithJson(w, http.StatusOK, responseChirps)
 }
 
 func (cfg *apiConfig) getSingleChirpHandler(w http.ResponseWriter, r *http.Request) {
