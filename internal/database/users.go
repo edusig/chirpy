@@ -2,12 +2,13 @@ package database
 
 import (
 	"errors"
+	"log"
 )
 
 type User struct {
 	ID       int    `json:"id"`
 	Email    string `json:"email"`
-	Password string `json:"password"`
+	Password string `json:"password,omitempty"`
 }
 
 func (db *DB) CreateUser(email, password string) (User, error) {
@@ -17,6 +18,7 @@ func (db *DB) CreateUser(email, password string) (User, error) {
 
 	dbStructure, err := db.loadDB()
 	if err != nil {
+		log.Printf("LOAD DB ERROR, %v", err)
 		return User{}, err
 	}
 
@@ -34,6 +36,7 @@ func (db *DB) CreateUser(email, password string) (User, error) {
 
 	err = db.writeDB(dbStructure)
 	if err != nil {
+		log.Printf("WRITE DB ERROR, %v", err)
 		return User{}, err
 	}
 
@@ -65,6 +68,25 @@ func (db *DB) GetUser(id int) (User, error) {
 	if !ok {
 		return User{}, ErrNotExist
 	}
+
+	return user, nil
+}
+
+func (db *DB) UpdateUser(id int, email, password string) (User, error) {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+
+	user, ok := dbStructure.Users[id]
+	if !ok {
+		return User{}, ErrNotExist
+	}
+
+	user.Email = email
+	user.Password = password
+	dbStructure.Users[id] = user
+	db.writeDB(dbStructure)
 
 	return user, nil
 }

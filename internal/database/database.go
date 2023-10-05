@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"sync"
+	"time"
 )
 
 type DB struct {
@@ -13,8 +14,9 @@ type DB struct {
 }
 
 type DBStructure struct {
-	Chirps map[int]Chirp `json:"chirps"`
-	Users  map[int]User  `json:"users"`
+	Chirps        map[int]Chirp        `json:"chirps"`
+	Users         map[int]User         `json:"users"`
+	RevokedTokens map[string]time.Time `json:"revoked_tokens"`
 }
 
 var ErrNotExist = errors.New("resource does not exist")
@@ -31,8 +33,9 @@ func NewDB(path string) (*DB, error) {
 
 func (db *DB) createDB() error {
 	structure := DBStructure{
-		Chirps: make(map[int]Chirp),
-		Users:  make(map[int]User),
+		Chirps:        make(map[int]Chirp),
+		Users:         make(map[int]User),
+		RevokedTokens: make(map[string]time.Time),
 	}
 	return db.writeDB(structure)
 }
@@ -70,8 +73,7 @@ func (db *DB) writeDB(dbStructure DBStructure) error {
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(db.path, data, 0600)
-	return err
+	return os.WriteFile(db.path, data, 0600)
 }
 
 func (db *DB) ResetDB() error {
@@ -79,5 +81,6 @@ func (db *DB) ResetDB() error {
 	if errors.Is(err, os.ErrNotExist) {
 		return nil
 	}
+	db.ensureDB()
 	return err
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"internal/auth"
 	"internal/database"
 	"net/http"
 	"strconv"
@@ -14,8 +15,20 @@ func (cfg *apiConfig) postChirpsHandler(w http.ResponseWriter, r *http.Request) 
 		Body string `json:"body"`
 	}
 
+	authHeader := r.Header.Get("Authorization")
+	token, err := auth.ValidateJWTToken(authHeader, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid JWT token")
+		return
+	}
+	userId, err := auth.GetUserFromTokenClaims(token)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error while decoding JWT token")
+		return
+	}
+
 	params := parameters{}
-	params, err := decodeJsonBody(r.Body, params)
+	params, err = decodeJsonBody(r.Body, params)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters")
 		return
@@ -29,7 +42,7 @@ func (cfg *apiConfig) postChirpsHandler(w http.ResponseWriter, r *http.Request) 
 
 	cleanedBody := cleanBody(params.Body)
 
-	chirp, err := cfg.database.CreateChirp(cleanedBody)
+	chirp, err := cfg.database.CreateChirp(cleanedBody, userId)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create chirp")
 		return
