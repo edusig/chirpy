@@ -15,6 +15,7 @@ type apiConfig struct {
 	fileserverHits int
 	database       *database.DB
 	jwtSecret      string
+	polkaApiKey    string
 }
 
 func main() {
@@ -24,8 +25,9 @@ func main() {
 	const port = ":8080"
 	const databasePath = "./database.json"
 	jwtSecret := os.Getenv("JST_SECRET")
+	polkaApiKey := os.Getenv("POLKA_API_KEY")
 
-	db, err := database.NewDB("database.json")
+	db, err := database.NewDB(databasePath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -44,6 +46,7 @@ func main() {
 		fileserverHits: 0,
 		database:       db,
 		jwtSecret:      jwtSecret,
+		polkaApiKey:    polkaApiKey,
 	}
 
 	r := chi.NewRouter()
@@ -55,15 +58,20 @@ func main() {
 	apiRouter := chi.NewRouter()
 	apiRouter.Get("/healthz", healthCheck)
 	apiRouter.Get("/reset", apiCfg.resetHandler)
-	apiRouter.Post("/chirps", apiCfg.postChirpsHandler)
+
+	apiRouter.Post("/chirps", apiCfg.createChirpsHandler)
 	apiRouter.Get("/chirps", apiCfg.getChirpsHandler)
 	apiRouter.Get("/chirps/{chirpID}", apiCfg.getSingleChirpHandler)
 	apiRouter.Delete("/chirps/{chirpID}", apiCfg.deleteSingleChirpHandler)
+
 	apiRouter.Post("/users", apiCfg.createUserHandler)
 	apiRouter.Put("/users", apiCfg.updateUserHandler)
+
 	apiRouter.Post("/login", apiCfg.login)
 	apiRouter.Post("/refresh", apiCfg.refreshJWTHandler)
 	apiRouter.Post("/revoke", apiCfg.revokeJWTHandler)
+
+	apiRouter.Post("/polka/webhooks", apiCfg.polkaWebhookHandler)
 	r.Mount("/api", apiRouter)
 
 	adminRouter := chi.NewRouter()

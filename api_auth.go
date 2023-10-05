@@ -15,6 +15,7 @@ func (cfg *apiConfig) login(w http.ResponseWriter, r *http.Request) {
 		// database.User
 		ID           int    `json:"id"`
 		Email        string `json:"email"`
+		IsChirpyRed  bool   `json:"is_chirpy_red"`
 		Token        string `json:"token"`
 		RefreshToken string `json:"refresh_token"`
 	}
@@ -48,6 +49,7 @@ func (cfg *apiConfig) login(w http.ResponseWriter, r *http.Request) {
 	respondWithJson(w, http.StatusOK, response{
 		ID:           user.ID,
 		Email:        user.Email,
+		IsChirpyRed:  user.IsChirpyRed,
 		Token:        accessToken,
 		RefreshToken: refreshToken,
 	})
