@@ -5,6 +5,7 @@ import (
 	"internal/auth"
 	"internal/database"
 	"net/http"
+	"sort"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
@@ -73,6 +74,20 @@ func (cfg *apiConfig) getChirpsHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+
+	sortDirection := "asc"
+	sortParam := r.URL.Query().Get("sort")
+	if sortParam != "" {
+		sortDirection = sortParam
+	}
+
+	sort.Slice(responseChirps, func(i, j int) bool {
+		a, b := responseChirps[i], responseChirps[j]
+		if sortDirection == "asc" {
+			return a.ID < b.ID
+		}
+		return a.ID > b.ID
+	})
 
 	respondWithJson(w, http.StatusOK, responseChirps)
 }

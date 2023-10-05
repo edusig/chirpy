@@ -1,9 +1,5 @@
 package database
 
-import (
-	"sort"
-)
-
 type Chirp struct {
 	ID       int    `json:"id"`
 	Body     string `json:"body"`
@@ -46,10 +42,6 @@ func (db *DB) GetChirps() ([]Chirp, error) {
 	for _, val := range dbStructure.Chirps {
 		chirps = append(chirps, val)
 	}
-	sort.Slice(chirps, func(i, j int) bool {
-		a, b := chirps[i], chirps[j]
-		return a.ID < b.ID
-	})
 	return chirps, nil
 }
 
